@@ -4,8 +4,6 @@ The Plug-in is still under development, if you have feature requests or encounte
 
 Here a little plug-in is shared that simplifies training data generation for segmentaion or classification models. 
 
-This work is inspired by the awsome work from Freudenberg et al. 2022
-
 ## Installation instructions: 
 
 - Download the complete main branch 
