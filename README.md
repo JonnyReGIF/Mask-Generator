@@ -25,14 +25,43 @@ Here a little plug-in is shared that simplifies training data generation for seg
 
 
 ![overview_final](https://github.com/user-attachments/assets/f68cb82e-4a44-4fdd-8cfb-73861a2dfbbf)
- 
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+To contribute:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 
+## License
 
+This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Citation 
 
+If you use the Mask-Generator Plug-In in your workflows, please consider citeing it: 
 
+```bibtex
+@software{Mask-Generator,
+  author = {Renkel, Jonathan},
+  title = {Mask-Generator: A QGIS Plug-In to streamline datamanagement during label generation},
+  year = {2025},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/JonnyReGIF/Mask-Generator}
+}
+```
 
+## Acknowledgments
+
+- Martin Luther University Halle-Wittenberg
+- Contributors and users who have provided valuable feedback
 
 
 
