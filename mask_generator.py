@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon, QStandardItemModel, QStandardItem
-from qgis.PyQt.QtWidgets import QAction, QFileDialog, QListView, QPushButton
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QListView, QPushButton, QMessageBox 
 from qgis.core import QgsProject, QgsVectorLayer, QgsRasterLayer, QgsDefaultValue
 from qgis.utils import iface
 from qgis.core import QgsVectorFileWriter
@@ -33,7 +33,7 @@ from .resources import *
 # Import the code for the dialog
 from .mask_generator_dialog import MaskGeneratorDialog
 import os
-
+import json
 
 class MaskGenerator:
     """QGIS Plugin Implementation."""
@@ -57,12 +57,13 @@ class MaskGenerator:
             'i18n',
             'MaskGenerator_{}.qm'.format(locale))
         
-        self.raster_files = []  # Initialize empty list for raster files
+        self.raster_files       = []  # Initialize empty list for raster files
         self.current_file_index = 0  # Initialize index tracker
-        self.outputDir = "" # Initialize output dir path
-        self.vlayerOn  = QgsVectorLayer() # empty vlayer Obj 
-        self.current_vName     = ""   # empty vlayer Name
-        
+        self.inputDir           = "" # Initialize input dir path
+        self.outputDir          = "" # Initialize output dir path
+        self.vlayerOn           = QgsVectorLayer() # empty vlayer Obj 
+        self.current_vName      = ""   # empty vlayer Name
+        #self.settingsTXT        = os.path.join(self.plugin_dir, "settings.txt") # Path to the settings .txt ToDO: Change that to .json or .yaml
         
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -206,9 +207,18 @@ class MaskGenerator:
         self.dlg.listView.setModel(model)
 
 
-    def select_input_dir(self):
-        # Open a QFileDialog to select a directory
-        directory = QFileDialog.getExistingDirectory(self.dlg, "Select Input Directory")
+    def select_input_dir(self, from_settings = False):
+    
+        if from_settings == True:
+        
+            directory = self.dlg.lineEdit_Input.text()
+        
+        else:    
+        
+            # Open a QFileDialog to select a directory
+            directory = QFileDialog.getExistingDirectory(self.dlg, "Select Input Directory")
+        
+        
         print("test")
         # Check if a directory was selected
         if directory:
@@ -225,6 +235,7 @@ class MaskGenerator:
         print(f"Found {len(files)} .tif files")
         
         return files
+        
 
     def get_OutputDir(self):
         directory = QFileDialog.getExistingDirectory(self.dlg, "Select Input Directory")
@@ -264,14 +275,29 @@ class MaskGenerator:
     def display_raster(self, i, create = True):
         """Display the raster file and generate its vector mask."""
         
+        print("*********")
+        print("*********")
+        print("*********")
+        print(self.dlg.lineEdit_Input.text())
+        print("*********")
+        print("*********")
+        print("*********")
+        
         print("printing form display_raster")
         
         #print(self.raster_files)
         
         if not self.raster_files or i >= len(self.raster_files):
             return
-            
+        
+        print("###################")
+        print("###################")
+        print(self.raster_files)
+        print("###################")
+        print("###################")
+        
         raster_path = self.raster_files[i]
+        
         
         # Load raster into QGIS
         iface.addRasterLayer(raster_path, os.path.basename(raster_path))
@@ -370,9 +396,6 @@ class MaskGenerator:
         
         current_raster = self.raster_files[self.current_file_index]
         
-        print(current_raster)
-        print(current_raster)
-        print(current_raster)
         
         self.display_raster(self.current_file_index)
         
@@ -384,31 +407,80 @@ class MaskGenerator:
         
         prev_index = self.current_file_index - 1
         
-        print("prev_index")
-        print(prev_index)
-        print(prev_index)
-        print(prev_index)
-        print("prev_index")
-        
-
         
         
         self.display_raster(prev_index, create = False)
         #self.load_prev_vLayer(prev_index)
 
+    def save_settings(self):
+        
+        QMessageBox.warning(
+            iface.mainWindow(),
+            "Info",
+            "Thsi Button writes the current Input, Output and raster tile. \n Best to use before ending the session :)"
+             )
+        
+        
+        # Save user settings as dict 
+        settings_dict = {
+            "Input": os.path.dirname(self.raster_files[0]),
+            "Output": self.outputDir,
+            "current_rFile": self.current_file_index
+        }
+        
+        path_to_saved_Json = os.path.join(self.plugin_dir, "settings.json")
+        
+        # write the settings to .json
+        try:
+            with open(os.path.join(self.plugin_dir, "settings.json"), "w") as settings_file:  # Overwrite or create
+                json.dump(settings_dict, settings_file, indent=4)  # Save as JSON with pretty formatting
+            
+            print(f"Json saved to {path_to_saved_Json}") # ToDo: del me 
+            
+        except FileNotFoundError as e:
+            print(f"Error: Plugin directory not found. {e}")
+            
+        except Exception as e:
+            print(f"An error occurred while saving settings: {e}")
+        
     
-    
-    
-    def save_layer():
-        pass
-    
-    
-    '''
-    def on_edit_command_ended(self):
-    
+    def load_settings(self):
+        
+        print("load button clicked")
+        
+        try:
+            # Read settings from the JSON file
+            with open(os.path.join(self.plugin_dir, "settings.json"), "r") as settings_file:
+                settings_dict = json.load(settings_file)  # Load JSON data into a dictionary
+                
+            # Set the values to the respective class attributes
+            self.inputDir = settings_dict.get("Input", "")
+            self.outputDir = settings_dict.get("Output", "")
+            self.current_file_index = settings_dict.get("current_rFile", 0)
+        
+        except FileNotFoundError:
+            print("Settings file not found. Please save settings first.")
+        except json.JSONDecodeError:
+            print("Settings file is corrupted or not in valid JSON format.")
+        except Exception as e:
+            print(f"An error occurred while loading settings: {e}")
+
+        self.dlg.lineEdit_Input.setText(self.inputDir)
+        self.dlg.lineEdit_Input_OutPath.setText(self.outputDir)
+        
+        self.select_input_dir(from_settings = True)
+        self.display_raster(self.current_file_index )
+
+        # check whats loaded 
+        # some how check the rasterList
+
+
+        '''
+        def on_edit_command_ended(self):
+
         print("printing from: on_edit_command_ended")
-    
-    
+
+
         """Triggered when editing ends, opens a save dialog to save the vector layer."""
         if not self.vlayerOn:
             print("No active vector layer to save.")
@@ -429,16 +501,16 @@ class MaskGenerator:
             os.path.join(self.outputDir, default_name) if self.outputDir else default_name,
             "Shapefile (*.shp);;GeoJSON (*.geojson);;KML (*.kml);;GPKG (*.gpkg);;All Files (*)"
         )
-        
+
         save_path = os.path.join(self.outputDir, f"{os.path.splitext(file_name)[0]}.shp")  
-        
+
         print(save_path)
         print(save_path)
         print(save_path)
         print(save_path)
         print(save_path)
         print(save_path)
-        
+
         if not save_path:
             print("Save operation canceled.")
             return
@@ -457,18 +529,18 @@ class MaskGenerator:
         options = QgsVectorFileWriter.SaveVectorOptions()
         options.driverName = driver_name
         options.fileEncoding = "utf-8"
-        
 
-        
+
+
         save_context = QgsProject.instance().transformContext()
-        
+
         error = QgsVectorFileWriter.writeAsVectorFormatV3(
             self.vlayerOn,
             save_path,
             save_context,
             options
         )
-        
+
         if error == QgsVectorFileWriter.NoError:
             print(f"Vector layer saved successfully at {save_path}")
         else:
@@ -494,6 +566,8 @@ class MaskGenerator:
             self.dlg.pushButton_saveVlayer.clicked.connect(self.save_vector)
             self.dlg.pushBotton_nextRlayer.clicked.connect(self.load_next_rlayer)
             self.dlg.pushBotton_prevRlayer_2.clicked.connect(self.load_prev_layers)
+            self.dlg.pushButtonSAVE_Set.clicked.connect(self.save_settings)
+            self.dlg.pushButton_LOAD_Set.clicked.connect(self.load_settings)
             #self.dlg.toolButton_Output(self.save_vector()) # TEST IT --try to fetch the user dir
             #self.dlg.CreateVector.clicked(self.create_vector())
             
